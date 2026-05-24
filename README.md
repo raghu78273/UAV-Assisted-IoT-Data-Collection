@@ -17,18 +17,13 @@ intelligence.
 
 ## Workflow
 
-IoT Sensor Nodes (deployed in the field)
-↓
-UAV detects and prioritizes nodes (ML-based)
-↓
-UAV flies optimized path (Energy-Aware Replanning)
-↓
-Data collected via DTN communication
-↓
-Multi-UAV coordination for full coverage
-↓
-Performance was evaluated across routing scenarios
-
+1. **IoT Sensor Nodes** — deployed across the field/environment
+2. **Node Prioritization** — ML algorithm ranks nodes by data importance
+3. **Path Planning** — UAV computes energy-aware optimized route
+4. **Data Collection** — UAV visits nodes, collects data via DTN communication
+5. **Multi-UAV Coordination** — multiple UAVs coordinate for full coverage
+6. **Performance Evaluation** — results analyzed across multiple routing scenarios
+   
 ## Key Algorithms
 | Algorithm | Description |
 |-----------|-------------|
@@ -45,29 +40,29 @@ Performance was evaluated across routing scenarios
 - **Multi-UAV Coordination** — distributed coverage strategies
 
 ## How to Run Simulation
-1. Download `IOT UAV SIMULATION347.html.`
+1. Download `IOT UAV SIMULATION347.html`
 2. Open it in any browser (Chrome recommended)
 3. Interact with the UAV path planning simulation directly —
-   No installation required
+   no installation required
 
 ## Applications
-- **Disaster Monitoring** — collect sensor data in disaster zones 
+- **Disaster Monitoring** — collect sensor data in disaster zones
   with no network infrastructure
-- **Smart Agriculture** — monitor soil, temperature, and humidity 
+- **Smart Agriculture** — monitor soil, temperature, and humidity
   sensors across large farmlands
-- **Remote Sensing** — gather environmental data from inaccessible 
+- **Remote Sensing** — gather environmental data from inaccessible
   or hazardous areas
-- **Environmental Monitoring** — track pollution, wildlife, and 
+- **Environmental Monitoring** — track pollution, wildlife, and
   climate parameters in forests and oceans
-- **Infrastructure-Free Communication** — enable data collection in 
+- **Infrastructure-Free Communication** — enable data collection in
   military, border, and rural areas with zero connectivity
-- **Search and Rescue** — locate and monitor victims using UAV-IoT 
+- **Search and Rescue** — locate and monitor victims using UAV-IoT
   integration in emergency scenarios
 
 ## Future Scope
-- Real hardware implementation using ESP32-based IoT nodes and 
+- Real hardware implementation using ESP32-based IoT nodes and
   actual drone platforms
-- Integration with deep reinforcement learning for smarter 
+- Integration with deep reinforcement learning for smarter
   UAV path planning
 - Energy harvesting techniques for extended UAV flight time
 - 5G and LoRaWAN communication integration for wider coverage
