@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAV IoT Field Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c12;
+  --bg2:#0c1118;
+  --bg3:#101720;
+  --bg4:#161f2c;
+  --border:#1c2a3a;
+  --border2:#243347;
+  --text:#e2ecf8;
+  --text2:#7a9ab8;
+  --text3:#3d5a72;
+  --accent:#38bdf8;
+  --accent2:#7dd3fc;
+  --green:#10b981;
+  --red:#f43f5e;
+  --amber:#f59e0b;
+  --purple:#8b5cf6;
+  --cyan:#06b6d4;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Syne',sans-serif;
+  --radius:6px;
+  --radius2:10px;
+}
+html,body{min-height:100%;overflow-y:auto;background:var(--bg);background-image:radial-gradient(ellipse 60% 35% at 50% 0%,rgba(56,189,248,0.07) 0%,transparent 60%)}
+body{font-family:var(--font-mono);color:var(--text);display:flex;flex-direction:column}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.hdr{
+  flex-shrink:0;
+  display:flex;align-items:center;gap:16px;
+  padding:0 24px;height:56px;
+  background:linear-gradient(90deg,#0c1118 0%,#101720 100%);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 2px 16px rgba(29,111,222,0.08);
+  backdrop-filter:blur(10px);
+}
+.hdr-logo{
+  display:flex;align-items:center;gap:10px;
+}
+.hdr-icon{
+  width:28px;height:28px;background:var(--accent);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#fff;font-weight:700;font-family:var(--font-display);
+  flex-shrink:0;
+}
+.hdr-title{font-size:13px;font-weight:700;font-family:var(--font-display);color:var(--text);letter-spacing:.3px}
+.hdr-sub{font-size:10px;color:var(--text3);letter-spacing:.4px;text-transform:uppercase}
+.hdr-chips{display:flex;gap:6px;margin-left:12px}
+.chip{
+  font-size:10px;font-weight:600;letter-spacing:.5px;
+  padding:3px 9px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--bg3);color:var(--text2);
+  font-family:var(--font-display);text-transform:uppercase;
+}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.hdr-status{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2)}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0}
+.sdot.run{background:var(--green);animation:blink 1.1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+
+/* ── MAIN LAYOUT ─────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;gap:0}
+
+/* ── SIMULATION CANVAS AREA (full-width horizontal) ────── */
+.sim-panel{
+  flex-shrink:0;height:420px;
+  background:var(--bg3);
+  border-bottom:1px solid var(--border);
+  position:relative;
+}
+canvas#cv{display:block;width:100%;height:100%}
+.cv-overlay{
+  position:absolute;top:12px;left:14px;
+  background:rgba(8,12,18,0.92);border:1px solid rgba(56,189,248,0.18);
+  border-radius:var(--radius2);padding:10px 14px;
+  font-size:11px;color:rgba(226,236,248,0.7);
+  backdrop-filter:blur(12px);line-height:2;
+  pointer-events:none;
+  box-shadow:0 4px 24px rgba(0,0,0,0.6);
+}
+.cv-overlay b{color:#e2ecf8;font-weight:600}
+.sim-metrics{
+  position:absolute;top:12px;right:14px;
+  display:flex;flex-direction:column;gap:5px;
+  pointer-events:none;
+}
+.sm-pill{
+  background:rgba(8,12,18,0.94);border:1px solid rgba(56,189,248,0.12);
+  border-radius:var(--radius);padding:5px 11px;
+  font-size:10px;color:var(--text2);
+  display:flex;align-items:center;gap:8px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  min-width:130px;
+}
+.sm-pill .sv{font-size:12px;font-weight:600;color:var(--text);margin-left:auto}
+.sm-pill.g .sv{color:var(--green)}
+.sm-pill.r .sv{color:var(--red)}
+.sm-pill.a .sv{color:var(--amber)}
+.sm-pill.b .sv{color:var(--accent2)}
+.prog-overlay{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  background:rgba(8,12,18,0.90);border:1px solid var(--border);
+  border-radius:var(--radius);padding:6px 14px;min-width:260px;
+  backdrop-filter:blur(8px);
+  box-shadow:0 2px 12px rgba(0,0,0,0.1);
+}
+.prog-row{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text2);margin-bottom:3px}
+.prog-row:last-child{margin-bottom:0}
+.prog-lbl{width:90px;flex-shrink:0}
+.prog-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width .4s}
+.prog-pct{font-size:10px;font-weight:600;color:var(--text);min-width:32px;text-align:right}
+
+/* ── CONTROLS ROW ────────────────────────────────────────── */
+.ctrl-panel{
+  flex-shrink:0;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;
+}
+.ctrl-panel::-webkit-scrollbar{height:4px}
+.ctrl-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.ctrl-inner{
+  display:flex;align-items:stretch;gap:0;
+  min-height:170px;
+  padding:0;
+}
+.ctrl-section{
+  border-right:1px solid var(--border);
+  padding:10px 14px;
+  flex-shrink:0;
+}
+.ctrl-section:last-child{border-right:none;flex:1}
+.ctrl-lbl{
+  font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--text3);margin-bottom:8px;font-family:var(--font-display);
+}
+
+/* Scenario buttons */
+.scene-grp{display:flex;flex-direction:column;gap:4px;min-width:200px}
+.sbt{
+  width:100%;text-align:left;
+  padding:6px 10px;border-radius:var(--radius);
+  border:1px solid var(--border2);background:var(--bg3);
+  color:var(--text2);cursor:pointer;
+  font-size:11px;font-weight:500;font-family:var(--font-mono);
+  display:flex;align-items:center;gap:7px;
+  transition:all .12s;white-space:nowrap;
+}
+.sbt:hover{background:var(--bg4);color:var(--text);border-color:var(--accent)}
+.sbt.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sbt .sd{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8;flex-shrink:0}
+.best-tag{font-size:8px;font-weight:700;padding:1px 5px;border-radius:20px;background:rgba(255,255,255,0.2);color:inherit;margin-left:auto;font-family:var(--font-display)}
+
+/* Select / Input */
+select,input[type=number]{
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);border-radius:var(--radius);
+  padding:5px 8px;font-size:11px;font-family:var(--font-mono);
+  outline:none;transition:border-color .12s;
+}
+select:focus,input[type=number]:focus{border-color:var(--accent)}
+select{width:100%}
+input[type=number]{width:100%}
+
+/* Sliders group */
+.sliders-grp{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;min-width:370px}
+.field{margin:0}
+.fhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.fname{font-size:10px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.fval{
+  font-size:10px;font-weight:600;color:var(--text);
+  background:var(--bg4);padding:1px 7px;border-radius:20px;
+  border:1px solid var(--border2);min-width:42px;text-align:center;
+}
+.hint{font-size:9px;color:var(--text3);margin-top:1px}
+.sw{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+input[type=range]{
+  width:100%;accent-color:var(--accent);
+  height:4px;cursor:pointer;
+}
+input[type=range]::-webkit-slider-track{height:4px;border-radius:2px}
+
+/* Action buttons */
+.actions-col{display:flex;flex-direction:column;gap:6px;min-width:90px}
+.btn{
+  padding:7px 14px;border-radius:var(--radius);
+  border:1px solid var(--border2);background:var(--bg3);
+  color:var(--text);cursor:pointer;
+  font-size:11px;font-weight:600;font-family:var(--font-mono);
+  transition:all .12s;white-space:nowrap;text-align:center;
+}
+.btn:hover{background:var(--bg4);border-color:var(--accent2);color:var(--accent2)}
+.btn.go{background:linear-gradient(135deg,var(--accent),#6366f1);border-color:var(--accent);color:#fff;font-size:12px;letter-spacing:.4px}
+.btn.go:hover{background:linear-gradient(135deg,#2563eb,#4f46e5);box-shadow:0 0 18px rgba(59,130,246,0.4)}
+.btn.warn{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:var(--red)}
+.btn.warn:hover{background:rgba(239,68,68,.2);box-shadow:0 0 12px rgba(239,68,68,0.2)}
+
+/* Speed control */
+.spd-row{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:6px}
+.spd-row label{font-size:10px;color:var(--text3);flex-shrink:0}
+.spd-row input{width:90px}
+.spd-row span{font-size:11px;font-weight:600;color:var(--text);min-width:22px}
+
+/* Legend mini */
+.leg{display:flex;flex-direction:column;gap:5px;min-width:110px}
+.li{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2)}
+.ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+.pred-panel{
+  flex:1;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+}
+.pred-inner{padding:14px 20px;display:flex;flex-direction:column;gap:12px}
+
+.pred-banner{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);
+  padding:12px 16px;
+  display:flex;gap:14px;align-items:flex-start;
+  border-left:3px solid var(--accent);
+}
+.pred-banner-icon{
+  width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:var(--radius);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;flex-shrink:0;margin-top:1px;
+}
+.pb-title{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);margin-bottom:4px}
+.pb-desc{font-size:11px;color:var(--text2);line-height:1.65}
+.bat-warn{
+  font-size:10px;color:var(--red);margin-top:5px;
+  padding:4px 10px;background:rgba(239,68,68,.08);border-radius:var(--radius);border:1px solid rgba(239,68,68,.25);
+  align-items:center;gap:6px;
+}
+
+.pred-tables{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.pred-tables{grid-template-columns:1fr}}
+
+.tbl-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);
+  overflow:hidden;
+}
+.tbl-hd{
+  padding:9px 14px;border-bottom:1px solid var(--border);
+  font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--text3);font-family:var(--font-display);
+  background:var(--bg3);
+  display:flex;align-items:center;gap:8px;
+}
+.tbl-hd::before{content:'';display:inline-block;width:2px;height:10px;background:var(--accent);border-radius:2px}
+table.pred{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;font-family:var(--font-mono)}
+table.pred th{
+  font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--text3);padding:7px 12px;text-align:left;
+  background:var(--bg3);border-bottom:1px solid var(--border);
+}
+table.pred td{
+  padding:8px 12px;border-bottom:1px solid var(--border);
+  color:var(--text2);vertical-align:middle;
+}
+table.pred tr:last-child td{border-bottom:none}
+table.pred tr.best td{background:rgba(29,111,222,.06)}
+table.pred tr.best td.nm{color:var(--text);font-weight:600}
+table.pred tr:not(.best):hover td{background:var(--bg3);cursor:pointer}
+.pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--font-display);letter-spacing:.3px}
+.pg{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.pr{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.pa{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.pb2{background:rgba(59,130,246,.12);color:var(--accent2);border:1px solid rgba(59,130,246,.2)}
+.sbar{height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden}
+.sf{height:100%;border-radius:2px;transition:width .5s}
+.rnk{
+  width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--bg3);color:var(--text3);border:1px solid var(--border2);
+  font-family:var(--font-display);
+}
+.rnk.r1{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* ── TEST CASES TABLE ────────────────────────────────────── */
+.test-section{
+  background:var(--bg2);border-top:2px solid var(--border);
+  padding:0 0 48px;
+}
+.test-hd{
+  padding:16px 20px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:var(--bg2);
+}
+.test-hd-left{display:flex;flex-direction:column;gap:3px}
+.test-hd-title{
+  font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--text);font-family:var(--font-display);display:flex;align-items:center;gap:8px;
+}
+.test-hd-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px}
+.test-sub{font-size:11px;font-weight:400;color:var(--text3);padding-left:11px}
+.test-legend{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.tleg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3);font-family:var(--font-display)}
+.test-scroll{overflow-x:auto;padding:18px 20px 0}
+.test-scroll::-webkit-scrollbar{height:5px}
+.test-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* group label rows */
+table.test-tbl tr.grp-hdr td{
+  background:var(--bg3);
+  padding:6px 14px;
+  font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--text3);font-family:var(--font-display);
+  border-bottom:1px solid var(--border2);
+  border-top:2px solid var(--border2);
+}
+table.test-tbl tr.grp-hdr:first-child td{border-top:none}
+
+table.test-tbl{
+  width:100%;border-collapse:separate;border-spacing:0;
+  font-size:11px;font-family:var(--font-mono);min-width:1200px;
+  border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden;
+}
+table.test-tbl thead tr{position:sticky;top:50px;z-index:2}
+table.test-tbl th{
+  font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--text3);padding:9px 10px;text-align:left;
+  background:var(--bg3);
+  border-bottom:2px solid var(--border2);
+  white-space:nowrap;
+}
+table.test-tbl th:first-child{border-radius:var(--radius2) 0 0 0;padding-left:14px}
+table.test-tbl th:last-child{border-radius:0 var(--radius2) 0 0}
+table.test-tbl td{
+  padding:7px 10px;border-bottom:1px solid var(--border);
+  color:var(--text2);vertical-align:middle;white-space:nowrap;
+}
+table.test-tbl td:first-child{padding-left:14px}
+table.test-tbl tbody tr:last-child td{border-bottom:none}
+table.test-tbl tbody tr:last-child td:first-child{border-radius:0 0 0 var(--radius2)}
+table.test-tbl tbody tr:last-child td:last-child{border-radius:0 0 var(--radius2) 0}
+table.test-tbl tr.tr-alt td{background:rgba(29,111,222,0.025)}
+table.test-tbl tbody tr:not(.grp-hdr):hover td{background:rgba(29,111,222,0.06);cursor:pointer}
+.tc-num{color:var(--text3);font-size:10px;font-weight:700;letter-spacing:.5px;width:36px}
+.tc-name{color:var(--text);font-weight:600}
+.tc-val{text-align:center;color:var(--text);font-weight:500}
+.tc-val.tc-red{color:var(--red);font-weight:700}
+.tc-val.tc-grn{color:var(--green);font-weight:700}
+.tc-val.tc-amber{color:var(--amber);font-weight:700}
+.tc-exp{color:var(--text3);font-size:10px;font-style:italic}
+.tc-badge{
+  font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;
+  display:inline-block;font-family:var(--font-display);letter-spacing:.5px;white-space:nowrap;
+}
+.tc-base{background:rgba(59,130,246,.15);color:var(--accent2);border:1px solid rgba(59,130,246,.3)}
+.tc-n1{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.tc-n2{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.tc-n3{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.tc-edge{background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.btn-load{
+  font-size:9px;font-weight:700;padding:3px 9px;border-radius:var(--radius);
+  border:1px solid var(--border2);background:var(--bg4);color:var(--text2);
+  cursor:pointer;font-family:var(--font-display);letter-spacing:.3px;
+  transition:all .12s;white-space:nowrap;
+}
+.btn-load:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────── -->
+<div class="hdr" style="position:sticky;top:0;z-index:100">
+  <div class="hdr-logo">
+    <div class="hdr-icon" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);font-size:16px">🛸</div>
+    <div>
+      <div class="hdr-title">UAV IoT Field Simulator</div>
+      <div class="hdr-sub">Scenario + battery-aware prediction engine</div>
+    </div>
+  </div>
+  <div class="hdr-chips">
+    <span class="chip active" id="chip-scene">Baseline</span>
+    <span class="chip" id="chip-path">Hilbert</span>
+    <span class="chip" id="chip-dist">Normal dist.</span>
+  </div>
+  <div class="hdr-status">
+    <span class="sdot" id="sdot"></span>
+    <span id="sim-st">Ready</span>
+  </div>
+</div>
+
+<!-- ── MAIN ────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- SIMULATION CANVAS -->
+  <div class="sim-panel" id="cv-wrap">
+    <canvas id="cv"></canvas>
+
+    <!-- Top-left overlay -->
+    <div class="cv-overlay" id="cv-badge">
+      Path: <b id="ov-path">Hilbert</b><br>
+      Scenario: <b id="ov-scene">Baseline</b><br>
+      Battery: <b id="ov-bat">100%</b>
+    </div>
+
+    <!-- Top-right live stats -->
+    <div class="sim-metrics">
+      <div class="sm-pill g"><span>Collected</span><span class="sv" id="m-col">0</span></div>
+      <div class="sm-pill r"><span>Failed</span><span class="sv" id="m-fail">0</span></div>
+      <div class="sm-pill r"><span>OOR</span><span class="sv" id="m-oor">0</span></div>
+      <div class="sm-pill b"><span>Replans</span><span class="sv" id="m-rep">0</span></div>
+      <div class="sm-pill a"><span>Distance</span><span class="sv" id="m-dist">0 m</span></div>
+      <div class="sm-pill r"><span>Priority left</span><span class="sv" id="m-prio">0</span></div>
+    </div>
+
+    <!-- Bottom progress bar -->
+    <div class="prog-overlay">
+      <div class="prog-row">
+        <span class="prog-lbl">Node collection</span>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%;background:var(--green)"></div></div>
+        <span class="prog-pct" id="prog-pct">0%</span>
+      </div>
+      <div class="prog-row">
+        <span class="prog-lbl">Battery</span>
+        <div class="prog-track"><div class="prog-fill" id="bat-fill" style="width:100%;background:var(--green)"></div></div>
+        <span class="prog-pct" id="bat-rem">100%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS ROW -->
+  <div class="ctrl-panel">
+    <div class="ctrl-inner">
+
+      <!-- Scenario -->
+      <div class="ctrl-section">
+        <div class="ctrl-lbl">Scenario</div>
+        <div class="scene-grp">
+          <button class="sbt on" onclick="setScene(0,this)"><span class="sd"></span>Baseline — Hilbert + DTN</button>
+          <button class="sbt" onclick="setScene(1,this)"><span class="sd"></span>Novelty 1 — Energy-aware</button>
+          <button class="sbt" onclick="setScene(2,this)"><span class="sd"></span>Novelty 2 — Multi-UAV</button>
+          <button class="sbt" onclick="setScene(3,this)"><span class="sd"></span>Novelty 3 — ML-predictive</button>
+        </div>
+      </div>
+
+      <!-- Field sliders -->
+      <div class="ctrl-section">
+        <div class="ctrl-lbl">Field Conditions</div>
+        <div class="sliders-grp">
+          <div class="field">
+            <div class="fhd">
+              <span class="fname"><span class="sw" style="background:#9CA3AF"></span>Failed nodes</span>
+              <span class="fval" id="v-fail">3</span>
+            </div>
+            <input type="range" min="0" max="12" step="1" value="3" id="sl-fail" oninput="go()">
+          </div>
+          <div class="field">
+            <div class="fhd">
+              <span class="fname"><span class="sw" style="background:#D4537E"></span>Out-of-range</span>
+              <span class="fval" id="v-oor">2</span>
+            </div>
+            <input type="range" min="0" max="12" step="1" value="2" id="sl-oor" oninput="go()">
+          </div>
+          <div class="field">
+            <div class="fhd">
+              <span class="fname"><span class="sw" style="background:#ef4444"></span>Priority nodes</span>
+              <span class="fval" id="v-prio">4</span>
+            </div>
+            <input type="range" min="0" max="12" step="1" value="4" id="sl-prio" oninput="go()">
+          </div>
+          <div class="field">
+            <div class="fhd">
+              <span class="fname">Total nodes</span>
+              <span class="fval" id="v-tot">32</span>
+            </div>
+            <input type="range" min="12" max="64" step="4" value="32" id="sl-tot" oninput="go()">
+          </div>
+        </div>
+      </div>
+
+      <!-- UAV settings -->
+      <div class="ctrl-section">
+        <div class="ctrl-lbl">UAV Settings</div>
+        <div class="sliders-grp">
+          <div class="field">
+            <div class="fhd">
+              <span class="fname">Battery charge</span>
+              <span class="fval" id="v-bat">100%</span>
+            </div>
+            <input type="range" min="10" max="100" step="5" value="100" id="sl-bat" oninput="go()">
+            <div class="hint">Affects range, speed &amp; prediction</div>
+          </div>
+          <div class="field">
+            <div class="fhd">
+              <span class="fname">Speed</span>
+              <span class="fval" id="v-spd">20 m/s</span>
+            </div>
+            <input type="range" min="5" max="40" step="5" value="20" id="sl-spd" oninput="go()">
+          </div>
+          <div class="field">
+            <div class="fhd">
+              <span class="fname">UAV count</span>
+              <span class="fval" id="v-uav">1</span>
+            </div>
+            <input type="range" min="1" max="3" step="1" value="1" id="sl-uav" oninput="go()">
+            <div class="hint">Multi-UAV: Novelty 2 mode</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Algorithm & Distribution -->
+      <div class="ctrl-section">
+        <div class="ctrl-lbl">Algorithm &amp; Distribution</div>
+        <div style="display:flex;flex-direction:column;gap:7px;min-width:180px">
+          <div>
+            <div class="fname" style="margin-bottom:4px;font-size:10px">Path algorithm</div>
+            <select id="sel-path" onchange="go()">
+              <option value="hilbert">Hilbert curve</option>
+              <option value="snake">Snake traversal</option>
+              <option value="diagonal">Diagonal sweep</option>
+              <option value="spiral">Spiral inward</option>
+              <option value="random">Random waypoint</option>
+            </select>
+          </div>
+          <div>
+            <div class="fname" style="margin-bottom:4px;font-size:10px">Node distribution</div>
+            <select id="sel-dist" onchange="go()">
+              <option value="normal">Normal</option>
+              <option value="uniform">Uniform</option>
+              <option value="even">Even</option>
+            </select>
+          </div>
+          <div>
+            <div class="fhd" style="margin-bottom:4px">
+              <span class="fname" style="font-size:10px">Area size (m²)</span>
+              <span class="fval" id="v-area">2,000</span>
+            </div>
+            <input type="range" min="500" max="10000" step="500" value="2000" id="sl-area" oninput="go()" style="width:100%">
+            <input type="number" id="inp-area" min="500" max="50000" step="500" value="2000"
+              oninput="syncAreaInput(this.value)" style="width:100%;margin-top:4px">
+            <div class="hint">Slider: up to 10k · Manual: up to 50k m²</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="ctrl-section">
+        <div class="ctrl-lbl">Legend</div>
+        <div class="leg">
+          <div class="li"><div class="ld" style="background:#4a90d9"></div>Uncollected</div>
+          <div class="li"><div class="ld" style="background:#f0a030"></div>Collecting</div>
+          <div class="li"><div class="ld" style="background:#10b981"></div>Collected</div>
+          <div class="li"><div class="ld" style="background:#ef4444"></div>Priority/new</div>
+          <div class="li"><div class="ld" style="background:#9CA3AF;outline:1px dashed #9CA3AF;outline-offset:1px"></div>Failed</div>
+          <div class="li"><div class="ld" style="background:#D4537E;outline:1px dashed #D4537E;outline-offset:1px"></div>OOR</div>
+          <div class="li"><div class="ld" style="background:var(--accent2);border-radius:2px;width:11px;height:7px"></div>UAV</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="ctrl-section" style="display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:stretch;min-width:100px">
+        <div class="ctrl-lbl">Controls</div>
+        <button class="btn go" id="btn-start" onclick="S&&S.start()">▶ Start</button>
+        <button class="btn" onclick="S&&S.pause()">⏸ Pause</button>
+        <button class="btn warn" onclick="rebuild()">↺ Reset</button>
+        <div class="spd-row">
+          <label>Sim speed</label>
+          <input type="range" min="1" max="10" step="1" value="3" id="sl-sim"
+            oninput="S&&(S.simSpd=+this.value);document.getElementById('spd-v').textContent=this.value+'×'">
+          <span id="spd-v">3×</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PREDICTION TABLES -->
+  <div class="pred-panel">
+    <div class="pred-inner">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+        <span style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);font-family:var(--font-display)">Live Prediction Engine</span>
+        <span style="flex:1;height:1px;background:var(--border)"></span>
+      </div>
+
+      <div class="pred-banner">
+        <div class="pred-banner-icon">🧠</div>
+        <div style="flex:1">
+          <div class="pb-title" id="pred-title">Adjust inputs to see live prediction</div>
+          <div class="pb-desc" id="pred-desc">Battery level, node count, failures, area size and distribution all factor into the recommendation below.</div>
+          <div class="bat-warn" id="bat-warn">⚠ Low battery — limited coverage predicted. Energy-aware routing strongly recommended.</div>
+        </div>
+      </div>
+
+      <div class="pred-tables">
+        <div class="tbl-card">
+          <div class="tbl-hd">Novelty method comparison</div>
+          <table class="pred">
+            <thead><tr>
+              <th style="width:5%"></th>
+              <th style="width:30%">Method</th>
+              <th style="width:14%">Score</th>
+              <th style="width:13%">Failures</th>
+              <th style="width:13%">OOR</th>
+              <th style="width:12%">Battery</th>
+              <th>Ideal when</th>
+            </tr></thead>
+            <tbody id="t-method"></tbody>
+          </table>
+        </div>
+        <div class="tbl-card">
+          <div class="tbl-hd">Path algorithm comparison</div>
+          <table class="pred">
+            <thead><tr>
+              <th style="width:5%"></th>
+              <th style="width:28%">Algorithm</th>
+              <th style="width:14%">Score</th>
+              <th style="width:14%">Coverage</th>
+              <th style="width:14%">Efficiency</th>
+              <th>Best for</th>
+            </tr></thead>
+            <tbody id="t-path"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- .pred-inner -->
+  </div>
+  <div class="test-section">
+    <div class="test-hd">
+      <div class="test-hd-left">
+        <div class="test-hd-title">Test Case Reference</div>
+        <div class="test-sub">20 cases · all 4 scenarios × 5 paths · click <b style="color:var(--accent2)">Load</b> to apply inputs instantly</div>
+      </div>
+      <div class="test-legend">
+        <span class="tleg"><span class="tc-badge tc-base">Baseline</span></span>
+        <span class="tleg"><span class="tc-badge tc-n1">Novelty 1</span></span>
+        <span class="tleg"><span class="tc-badge tc-n2">Novelty 2</span></span>
+        <span class="tleg"><span class="tc-badge tc-n3">Novelty 3</span></span>
+        <span class="tleg"><span class="tc-badge tc-edge">Edge</span></span>
+      </div>
+    </div>
+    <div class="test-scroll">
+    <table class="test-tbl">
+      <thead>
+        <tr>
+          <th>#</th><th>Case Name</th><th>Type</th><th>Scenario</th>
+          <th>Battery</th><th>Speed</th><th>UAVs</th><th>Nodes</th>
+          <th>Failed</th><th>OOR</th><th>Priority</th><th>Dist.</th>
+          <th>Path</th><th>Area m²</th><th>Expected Outcome</th><th>Load</th>
+        </tr>
+      </thead>
+      <tbody id="tc-tbody"></tbody>
+    </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const GRID=4;
+const hPts=n=>{const f=(n,d)=>{let rx,ry,s,t=d,x=0,y=0;for(s=1;s<n;s*=2){rx=1&(t/2);ry=1&(t^rx);if(!ry){if(rx){x=s-1-x;y=s-1-y;}let q=x;x=y;y=q;}x+=s*rx;y+=s*ry;t=Math.floor(t/4);}return[x,y];};const p=[];for(let d=0;d<n*n;d++)p.push(f(n,d));return p;};
+const snakePts=n=>{const p=[];for(let r=0;r<n;r++){if(r%2===0)for(let c=0;c<n;c++)p.push([c,r]);else for(let c=n-1;c>=0;c--)p.push([c,r]);}return p;};
+const randPts=n=>{const p=[];for(let r=0;r<n;r++)for(let c=0;c<n;c++)p.push([c,r]);for(let i=p.length-1;i>0;i--){const j=0|Math.random()*(i+1);[p[i],p[j]]=[p[j],p[i]];}return p;};
+const diagPts=n=>{const p=[];for(let d=0;d<2*n-1;d++)for(let r=Math.max(0,d-n+1);r<=Math.min(d,n-1);r++){const c=d-r;p.push(d%2===0?[c,r]:[n-1-c,r]);}return p;};
+const spiralPts=n=>{const p=[];let t=0,b=n-1,l=0,r=n-1;while(t<=b&&l<=r){for(let c=r;c>=l;c--)p.push([c,t]);t++;for(let row=t;row<=b;row++)p.push([l,row]);l++;if(t<=b){for(let c=l;c<=r;c++)p.push([c,b]);b--;}if(l<=r){for(let row=b;row>=t;row--)p.push([r,row]);r--;}}return p;};
+const pathFns={hilbert:hPts,snake:snakePts,diagonal:diagPts,spiral:spiralPts,random:randPts};
+const PATH_NAMES={hilbert:'Hilbert curve',snake:'Snake traversal',diagonal:'Diagonal sweep',spiral:'Spiral inward',random:'Random waypoint'};
+const SCENE_NAMES=['Baseline — Hilbert + DTN','Novelty 1 — Energy-aware','Novelty 2 — Multi-UAV','Novelty 3 — ML-predictive'];
+
+let scene=0,S=null;
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let W,H,CW,CH,MAR=20;
+
+function syncAreaInput(val){
+  const v=Math.max(500,Math.min(50000,+val||2000));
+  document.getElementById('sl-area').value=Math.min(10000,v);
+  document.getElementById('inp-area').value=v;
+  document.getElementById('v-area').textContent=v.toLocaleString();
+  go();
+}
+
+function resize(){
+  const r=document.getElementById('cv-wrap').getBoundingClientRect();
+  W=Math.round(r.width);H=Math.round(r.height);
+  cv.width=W;cv.height=H;
+  CW=(W-MAR*2)/GRID;CH=(H-MAR*2)/GRID;
+  if(S){S.W=W;S.H=H;S.CW=CW;S.CH=CH;S.draw();}
+}
+new ResizeObserver(resize).observe(document.getElementById('cv-wrap'));
+
+function gv(){
+  const tot=+document.getElementById('sl-tot').value;
+  const fail=Math.min(+document.getElementById('sl-fail').value,tot-2);
+  const oor=Math.min(+document.getElementById('sl-oor').value,tot-2-fail);
+  const prio=Math.min(+document.getElementById('sl-prio').value,tot-2-fail-oor);
+  const bat=+document.getElementById('sl-bat').value;
+  const area=+document.getElementById('inp-area').value||2000;
+  return{tot,fail,oor,prio,bat,area,
+    spd:+document.getElementById('sl-spd').value,
+    uavCount:+document.getElementById('sl-uav').value,
+    pathKey:document.getElementById('sel-path').value,
+    dist:document.getElementById('sel-dist').value};
+}
+
+// ── SCORING ────────────────────────────────────────────────────
+function methodScore(id,v){
+  const{fail:f,oor:o,prio:p,area:a=2000,bat:b,uavCount:uc}=v;
+  const batPenalty=b<40?20:b<60?10:b<80?5:0;
+  if(id==='base'){
+    let s=70-f*9-o*8-p*2-batPenalty*1.2;
+    if(b<30)s-=15; if(a>5000)s-=8;
+    if(scene===0)s+=14; // active scene boost
+    return Math.max(5,Math.min(100,Math.round(s)));
+  }
+  if(id==='n1'){
+    let s=68+Math.min(f*7,22)+Math.min(o*6,18)+(p>2?5:0);
+    s+=(100-b)*0.18; if(b<40)s+=15;
+    if(scene===1)s+=12;
+    return Math.max(10,Math.min(100,Math.round(s)));
+  }
+  if(id==='n2'){
+    let s=60+(uc>1?25:0)+(f>0?5:0)+(o>0?5:0);
+    s+=Math.min(15,(a-2000)/500);
+    s-=batPenalty*0.6; if(b<40&&uc>1)s-=20;
+    if(scene===2)s+=12;
+    return Math.max(10,Math.min(100,Math.round(s)));
+  }
+  if(id==='n3'){
+    let s=62+Math.min(p*9,32)-(f>4?12:0)-(o>4?10:0);
+    s-=batPenalty*0.4; if(b<25)s-=10;
+    if(scene===3)s+=12;
+    return Math.max(10,Math.min(100,Math.round(s)));
+  }
+  return 50;
+}
+function pathScore(pid,v){
+  const{fail:f,oor:o,prio:p,bat:b,area:a=2000,pathKey}=v;
+  const batPenalty=b<40?8:b<60?4:0;
+  // base scores
+  const base={
+    0:86-(f>0?5:0)-(o>0?3:0)-batPenalty*.5,     // hilbert
+    1:71-(p>3?5:0)-batPenalty*.8,                 // snake
+    2:46+(p>5?10:0)-batPenalty*.4,                // random
+    3:63+(a>5000?10:0)-batPenalty*.4,             // diagonal
+    4:73+(p>6?12:0)-(f>3?10:0)-batPenalty*.6,    // spiral
+  };
+  // scene-specific path affinities
+  if(scene===1){base[0]+=4;base[1]+=6;base[3]-=5;base[4]+=2;}
+  if(scene===2){base[1]+=8;base[3]+=(a>5000?14:6);base[0]-=3;base[4]-=4;}
+  if(scene===3){base[4]+=(p>6?18:12);base[0]+=5;base[1]-=4;base[3]-=6;}
+  // small boost for the path the user actually selected
+  const keyToPid={hilbert:0,snake:1,random:2,diagonal:3,spiral:4};
+  if(keyToPid[pathKey]===pid) base[pid]+=5;
+  return Math.max(10,Math.min(100,Math.round(base[pid]||50)));
+}
+function scFill(s){return s>=78?'#10b981':s>=62?'#60a5fa':s>=46?'#f59e0b':'#ef4444';}
+function yesNo(ok){return ok?'<span class="pill pg">Yes</span>':'<span class="pill pr">No</span>';}
+function rPill(v){const m={Best:'pg',Good:'pb2',Fair:'pa',Poor:'pr',Full:'pb2',Partial:'pa',High:'pg',Medium:'pb2',Low:'pa'};return`<span class="pill ${m[v]||'pa'}">${v}</span>`;}
+function batPill(v){
+  if(v>=80)return'<span class="pill pg">Great</span>';
+  if(v>=50)return'<span class="pill pb2">Good</span>';
+  if(v>=30)return'<span class="pill pa">Limited</span>';
+  return'<span class="pill pr">Critical</span>';
+}
+
+function updatePred(v){
+  const{fail:f,oor:o,prio:p,bat:b,area:a=2000,uavCount:uc}=v;
+  const methods=[
+    {id:'base',name:'Baseline',fh:0,oh:0,ph:0,when:'Fully reachable, bat >60%'},
+    {id:'n1',name:'N1 — Energy-aware',fh:1,oh:1,ph:0,when:'Low battery or OOR nodes'},
+    {id:'n2',name:'N2 — Multi-UAV',fh:0,oh:0,ph:0,when:`Large area (${a>4000?'✓ detected':'needs >4000m²'}), 2+ UAVs`},
+    {id:'n3',name:'N3 — ML-predictive',fh:0,oh:0,ph:1,when:'High priority anomaly count'},
+  ].map(m=>({...m,sc:methodScore(m.id,v)})).sort((a,b2)=>b2.sc-a.sc);
+
+  const paths=[
+    {pid:0,name:'Hilbert curve',cov:'Full',eff:'Best',for:'Dense / normal dist.'},
+    {pid:1,name:'Snake traversal',cov:'Full',eff:'Fair',for:'Even distribution'},
+    {pid:2,name:'Random waypoint',cov:'Partial',eff:'Poor',for:'Unknown sparse'},
+    {pid:3,name:'Diagonal sweep',cov:'Full',eff:'Good',for:'Large open areas'},
+    {pid:4,name:'Spiral inward',cov:'Full',eff:'Good',for:'Centre-clustered nodes'},
+  ].map(x=>({...x,sc:pathScore(x.pid,v)})).sort((a,b2)=>b2.sc-a.sc);
+
+  const bM=methods[0],bP=paths[0];
+  const batNote=b<30?` ⚠ Battery critically low (${b}%) — energy-aware routing strongly recommended.`:b<60?` Note: Battery at ${b}% — consider N1 energy-aware mode.`:'';
+  const areaNote=a>4000?` Field area ${a.toLocaleString()} m² — multi-UAV coverage recommended.`:'';
+  const descs={
+    base:`No significant failures or scale constraints. Original Hilbert + DTN approach is optimal.${batNote}${areaNote}`,
+    n1:`${f} failure(s) and ${o} OOR node(s) detected. N1 throttles speed and replans mid-flight to conserve the remaining ${b}% battery.${batNote}`,
+    n2:`Multi-UAV coverage halves collection time across ${a.toLocaleString()} m². ${b<50?`Battery at ${b}% — ensure sufficient charge before deploying multiple units.`:'Sufficient battery for fleet operation.'}`,
+    n3:`${p} high-priority node(s) detected. ML pre-flags anomalies so UAV extends dwell at critical cells first.${batNote}`,
+  };
+  document.getElementById('pred-title').textContent=`Recommended: ${bM.name} + ${bP.name}   (method ${bM.sc}/100 · path ${bP.sc}/100)`;
+  document.getElementById('pred-desc').textContent=descs[bM.id]||'';
+  document.getElementById('bat-warn').style.display=b<40?'block':'none';
+
+  document.getElementById('t-method').innerHTML=methods.map((m,i)=>`
+    <tr class="${i===0?'best':''}">
+      <td><span class="rnk${i===0?' r1':''}">${i+1}</span></td>
+      <td class="nm">${m.name}${i===0?'<span class="best-tag" style="margin-left:6px">best</span>':''}</td>
+      <td><div style="font-size:12px;font-weight:600;color:${scFill(m.sc)}">${m.sc}<span style="font-size:9px;font-weight:400;color:var(--text3)">/100</span></div><div class="sbar"><div class="sf" style="width:${m.sc}%;background:${scFill(m.sc)}"></div></div></td>
+      <td>${yesNo(m.fh)}</td><td>${yesNo(m.oh)}</td>
+      <td>${batPill(b)}</td>
+      <td style="font-size:10px;color:var(--text3)">${m.when}</td>
+    </tr>`).join('');
+
+  document.querySelectorAll('.sbt').forEach((b2,i)=>{
+    const old=b2.querySelector('.best-tag');if(old)old.remove();
+    if(methods[0].id===['base','n1','n2','n3'][i]){const tg=document.createElement('span');tg.className='best-tag';tg.textContent='best';b2.appendChild(tg);}
+  });
+
+  document.getElementById('t-path').innerHTML=paths.map((p2,i)=>`
+    <tr class="${i===0?'best':''}">
+      <td><span class="rnk${i===0?' r1':''}">${i+1}</span></td>
+      <td class="nm">${p2.name}${i===0?'<span class="best-tag" style="margin-left:6px">best</span>':''}</td>
+      <td><div style="font-size:12px;font-weight:600;color:${scFill(p2.sc)}">${p2.sc}<span style="font-size:9px;font-weight:400;color:var(--text3)">/100</span></div><div class="sbar"><div class="sf" style="width:${p2.sc}%;background:${scFill(p2.sc)}"></div></div></td>
+      <td>${rPill(p2.cov)}</td><td>${rPill(p2.eff)}</td>
+      <td style="font-size:10px;color:var(--text3)">${p2.for}</td>
+    </tr>`).join('');
+}
+
+function go(){
+  const v=gv();
+  document.getElementById('v-bat').textContent=v.bat+'%';
+  document.getElementById('v-fail').textContent=v.fail;
+  document.getElementById('v-oor').textContent=v.oor;
+  document.getElementById('v-prio').textContent=v.prio;
+  document.getElementById('v-tot').textContent=v.tot;
+  document.getElementById('v-spd').textContent=v.spd+' m/s';
+  document.getElementById('v-uav').textContent=v.uavCount;
+  document.getElementById('v-area').textContent=v.area.toLocaleString();
+  // sync area slider display
+  document.getElementById('sl-area').value=Math.min(10000,v.area);
+  const pn={hilbert:'Hilbert curve',snake:'Snake',diagonal:'Diagonal',spiral:'Spiral',random:'Random'};
+  document.getElementById('chip-path').textContent=pn[v.pathKey]||v.pathKey;
+  const dn={normal:'Normal dist.',uniform:'Uniform dist.',even:'Even dist.'};
+  document.getElementById('chip-dist').textContent=dn[v.dist]||v.dist;
+  document.getElementById('ov-path').textContent=PATH_NAMES[v.pathKey]||v.pathKey;
+  document.getElementById('ov-bat').textContent=v.bat+'%';
+  updatePred(v);
+  rebuild();
+}
+
+// sync range slider → number input
+document.getElementById('sl-area').addEventListener('input',function(){
+  document.getElementById('inp-area').value=this.value;
+  document.getElementById('v-area').textContent=(+this.value).toLocaleString();
+  go();
+});
+
+function setScene(s,el){
+  scene=s;
+  document.querySelectorAll('.sbt').forEach((b,i)=>b.classList.toggle('on',i===s));
+  document.getElementById('chip-scene').textContent=SCENE_NAMES[s].split(' — ')[0];
+  document.getElementById('ov-scene').textContent=SCENE_NAMES[s];
+  if(s===2)document.getElementById('sl-uav').value=2;
+  go();
+}
+
+// ── DRONE DRAW ─────────────────────────────────────────────────
+function drawDrone(c,x,y,ang,col,tick,label,batFrac){
+  c.save();c.translate(x,y);c.rotate(ang);
+  const arms=[[-1,-1],[1,-1],[-1,1],[1,1]];
+  arms.forEach(([sx,sy])=>{c.strokeStyle=col+'cc';c.lineWidth=2.5;c.lineCap='round';c.beginPath();c.moveTo(sx*2,sy*2);c.lineTo(sx*13,sy*13);c.stroke();});
+  arms.forEach(([sx,sy])=>{
+    const rx=sx*13,ry=sy*13;
+    c.save();c.translate(rx,ry);
+    c.fillStyle=col+'20';c.beginPath();c.arc(0,0,7,0,Math.PI*2);c.fill();
+    c.rotate(tick*.42*sx*sy);
+    c.strokeStyle=col+'cc';c.lineWidth=1.8;c.lineCap='round';
+    for(let i=0;i<2;i++){c.save();c.rotate(i*Math.PI/2);c.beginPath();c.moveTo(-6,0);c.lineTo(6,0);c.stroke();c.restore();}
+    c.restore();
+    c.fillStyle=col+'88';c.beginPath();c.arc(rx,ry,2,0,Math.PI*2);c.fill();
+  });
+  c.fillStyle=col;c.beginPath();c.ellipse(0,0,9,5,0,0,Math.PI*2);
+  c.shadowColor='rgba(0,0,0,0.5)';c.shadowBlur=8;
+  c.fill();c.shadowColor='transparent';c.shadowBlur=0;
+  c.strokeStyle='rgba(255,255,255,0.3)';c.lineWidth=1;c.stroke();
+  c.fillStyle='rgba(255,255,255,0.85)';c.beginPath();c.ellipse(-1,-1.5,3,2,0,0,Math.PI*2);c.fill();
+  c.fillStyle='rgba(255,255,255,0.5)';c.beginPath();c.moveTo(11,0);c.lineTo(7,-3);c.lineTo(7,3);c.fill();
+  const fl=.35+.65*Math.abs(Math.sin(tick*.07));
+  const bCol=batFrac>0.4?`rgba(16,185,129,${fl})`:`rgba(244,63,94,${fl})`;
+  c.fillStyle=bCol;c.beginPath();c.arc(-8,0,2,0,Math.PI*2);c.fill();
+  c.restore();
+  if(label){c.font='bold 10px "JetBrains Mono",monospace';c.fillStyle=col;c.fillText(label,x+15,y-10);}
+  // Add shadow for better visibility on light bg
+  c.shadowColor='transparent';}
+
+class Sim{
+  constructor(){
+    this.W=W;this.H=H;this.CW=CW;this.CH=CH;
+    this.v=gv();this.simSpd=+document.getElementById('sl-sim').value;
+    this.RANGE=46;this.tick=0;this.running=false;this.paused=false;this.raf=null;
+    this.replans=0;this.noveltyDone=false;this.rf=null;this.particles=[];this.completed=false;
+    this.globalBat=this.v.bat/100;
+    this.build();
+  }
+  cc(gx,gy){return[MAR+gx*this.CW+this.CW/2,MAR+gy*this.CH+this.CH/2];}
+  build(){
+    const v=this.v;this.devices=[];this.uavs=[];this.tick=0;this.replans=0;
+    this.noveltyDone=false;this.rf=null;this.particles=[];this.globalBat=v.bat/100;
+    const uavCount=Math.max(1,v.uavCount);
+    const getZone=(gx,uc)=>{const base=Math.floor(GRID/uc),extra=GRID%uc;let s=0;for(let i=0;i<uc;i++){const sz=base+(i<extra?1:0);if(gx>=s&&gx<s+sz)return i;s+=sz;}return uc-1;};
+    const hpts=hPts(GRID);
+    const pos=[];
+    if(v.dist==='even'){
+      hpts.forEach(([gx,gy])=>{const cx=MAR+gx*this.CW,cy=MAR+gy*this.CH;for(let i=0;i<2;i++)pos.push({gx,gy,x:cx+this.CW*.15+Math.random()*this.CW*.7,y:cy+this.CH*.15+Math.random()*this.CH*.7,zone:getZone(gx,uavCount)});});
+    } else if(v.dist==='uniform'){
+      for(let i=0;i<v.tot;i++){const x=MAR+Math.random()*(this.CW*GRID),y=MAR+Math.random()*(this.CH*GRID);const gx=Math.min(GRID-1,Math.floor((x-MAR)/this.CW)),gy=Math.min(GRID-1,Math.floor((y-MAR)/this.CH));pos.push({gx,gy,x,y,zone:getZone(gx,uavCount)});}
+    } else {
+      const cx2=MAR+this.CW*GRID/2,cy2=MAR+this.CH*GRID/2;
+      for(let i=0;i<v.tot;i++){const r=(Math.random()+Math.random())*this.CW*1.3,a=Math.random()*Math.PI*2;const x=Math.max(MAR+4,Math.min(MAR+this.CW*GRID-4,cx2+r*Math.cos(a))),y=Math.max(MAR+4,Math.min(MAR+this.CH*GRID-4,cy2+r*Math.sin(a)));const gx=Math.min(GRID-1,Math.floor((x-MAR)/this.CW)),gy=Math.min(GRID-1,Math.floor((y-MAR)/this.CH));pos.push({gx,gy,x,y,zone:getZone(gx,uavCount)});}
+    }
+    for(let i=pos.length-1;i>0;i--){const j=0|Math.random()*(i+1);[pos[i],pos[j]]=[pos[j],pos[i]];}
+    let nF=Math.min(v.fail,pos.length-1),nO=Math.min(v.oor,pos.length-1-nF),nP=Math.min(v.prio,pos.length-1-nF-nO);
+    pos.forEach((pt,i)=>{let state='uncollected',prio=false;if(i<nF)state='failed';else if(i<nF+nO)state='outofrange';else if(i<nF+nO+nP)prio=true;this.devices.push({...pt,state,initState:state,priority:prio,isNew:false,phase:Math.random()*Math.PI*2});});
+    const pathFn=pathFns[v.pathKey]||hPts;
+    const uavCols=[['#38bdf8','#7dd3fc'],['#10b981','#6ee7b7'],['#f59e0b','#fde68a']];
+    // Compute fair zone ranges: distribute GRID columns evenly, no UAV gets zero columns
+    const uavZones=[];{const base=Math.floor(GRID/uavCount),extra=GRID%uavCount;let s=0;for(let i=0;i<uavCount;i++){const sz=base+(i<extra?1:0);uavZones.push([s,s+sz]);s+=sz;}}
+    for(let ui=0;ui<uavCount;ui++){
+      let wp;
+      if(uavCount>1){const[minGx,maxGx]=uavZones[ui];wp=pathFn(GRID).filter(([gx])=>gx>=minGx&&gx<maxGx).map(([gx,gy])=>this.cc(gx,gy));}
+      else wp=pathFn(GRID).map(([gx,gy])=>this.cc(gx,gy));
+      if(!wp.length)wp=[this.cc(0,0)];
+      const[bc,rc]=uavCols[ui%uavCols.length];
+      this.uavs.push({x:wp[0][0],y:wp[0][1],wp,wi:1,dist:0,body:bc,rotor:rc,zone:ui,path:[],dwell:0,ang:0,bat:v.bat/100});
+    }
+    this.draw();this.updateUI();
+  }
+  start(){if(this.running)return;if(this.completed){this.build();this.completed=false;}this.running=true;this.paused=false;setSt('Running',true);this.loop();}
+  pause(){this.paused=!this.paused;setSt(this.paused?'Paused':'Running',!this.paused);}
+  stop(){this.running=false;this.paused=false;if(this.raf)cancelAnimationFrame(this.raf);this.raf=null;}
+  loop(){this.raf=requestAnimationFrame(()=>{for(let i=0;i<this.simSpd;i++)if(!this.paused)this.step();this.draw();this.updateUI();const allDone=this.uavs.every(u=>u.wi>=u.wp.length);if(this.running&&allDone){this.running=false;this.paused=false;this.completed=true;setSt('Complete',false);}else if(this.running)this.loop();});}
+  step(){
+    this.tick++;
+    this.particles=this.particles.filter(p=>p.life>0);
+    this.particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=.045;p.vx*=.93;p.vy*=.93;});
+    const avgBat=this.uavs.reduce((a,u)=>a+u.bat,0)/this.uavs.length;
+    const eSpdMult=scene===1?(avgBat<.4?.55:avgBat<.6?.8:1):1;
+    if(scene===3&&!this.noveltyDone&&this.tick===55){
+      this.noveltyDone=true;this.replans++;
+      this.devices.filter(d=>d.state==='uncollected').slice(0,3).forEach(d=>{d.priority=true;d.isNew=true;});
+      const u=this.uavs[0];const ah=u.wp[Math.min(u.wi+2,u.wp.length-1)];this.rf={x:ah[0],y:ah[1],t:80};
+    }
+    if(scene===1&&!this.noveltyDone&&this.tick===85){
+      this.noveltyDone=true;this.replans++;
+      const u=this.uavs[0];const ah=u.wp[Math.min(u.wi+3,u.wp.length-1)];
+      for(let i=0;i<4;i++)this.devices.push({x:ah[0]+(Math.random()-.5)*this.CW*.9,y:ah[1]+(Math.random()-.5)*this.CH*.9,state:'newdev',initState:'newdev',zone:0,priority:false,isNew:true,phase:Math.random()*Math.PI*2});
+      this.rf={x:ah[0],y:ah[1],t:80};const ca=this.devices.filter(d=>d.state==='uncollected');if(ca.length)ca[0].state=ca[0].initState='failed';
+    }
+    if(this.rf)this.rf.t--;
+    this.uavs.forEach(u=>{
+      if(u.wi>=u.wp.length)return;if(u.dwell>0){u.dwell--;return;}
+      const[tx,ty]=u.wp[u.wi];const dx=tx-u.x,dy=ty-u.y,d=Math.sqrt(dx*dx+dy*dy);
+      const spd=1.4*eSpdMult;
+      if(d<spd){u.x=tx;u.y=ty;u.wi++;if(scene===3){const near=this.devices.some(dv=>dv.priority&&!['collected','failed','outofrange'].includes(dv.state)&&Math.sqrt((dv.x-u.x)**2+(dv.y-u.y)**2)<this.RANGE+10);if(near)u.dwell=40;}}
+      else{u.ang=Math.atan2(dy,dx);u.x+=dx/d*spd;u.y+=dy/d*spd;}
+      u.dist+=spd;u.path.push([u.x,u.y]);if(u.path.length>700)u.path.shift();
+      const drain=0.00010*eSpdMult*(scene===2?.8:1);
+      u.bat=Math.max(0,u.bat-drain);
+    });
+    this.globalBat=this.uavs.reduce((a,u)=>a+u.bat,0)/this.uavs.length;
+    this.devices.forEach(dv=>{
+      if(['collected','failed','outofrange'].includes(dv.state))return;
+      this.uavs.forEach(u=>{
+        if(scene===2&&this.uavs.length>1&&dv.zone!==u.zone)return;
+        const dist=Math.sqrt((dv.x-u.x)**2+(dv.y-u.y)**2);
+        if(dist<this.RANGE){if(dv.state!=='newdev')dv.state='inRange';if(Math.random()<.048){dv.state='collected';for(let i=0;i<6;i++){const a=Math.random()*Math.PI*2;this.particles.push({x:dv.x,y:dv.y,vx:Math.cos(a)*1.8,vy:Math.sin(a)*1.8,life:1,col:'#10b981'});}}}
+        else if(dv.state==='inRange')dv.state=dv.initState==='newdev'?'newdev':'uncollected';
+      });
+    });
+  }
+  draw(){
+    const t=Date.now()/1000;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#06090e';ctx.fillRect(0,0,W,H);
+    for(let gx=0;gx<GRID;gx++)for(let gy=0;gy<GRID;gy++){
+      ctx.fillStyle=(gx+gy)%2===0?'rgba(56,189,248,0.04)':'rgba(255,255,255,0.015)';
+      ctx.beginPath();ctx.roundRect(MAR+gx*CW+1,MAR+gy*CH+1,CW-2,CH-2,5);ctx.fill();
+      ctx.strokeStyle='rgba(56,189,248,0.07)';ctx.lineWidth=.5;ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(56,189,248,0.06)';ctx.lineWidth=.5;
+    for(let i=0;i<=GRID;i++){ctx.beginPath();ctx.moveTo(MAR+i*CW,MAR);ctx.lineTo(MAR+i*CW,MAR+CH*GRID);ctx.stroke();ctx.beginPath();ctx.moveTo(MAR,MAR+i*CH);ctx.lineTo(MAR+CW*GRID,MAR+i*CH);ctx.stroke();}
+    if(scene===2&&this.uavs.length>1){
+      const cols=['rgba(29,111,222,0.07)','rgba(5,150,105,0.07)','rgba(217,119,6,0.07)'];
+      // Recompute fair zones for drawing (same logic as build)
+      const dZones=[];{const base=Math.floor(GRID/this.uavs.length),extra=GRID%this.uavs.length;let s=0;for(let i=0;i<this.uavs.length;i++){const sz=base+(i<extra?1:0);dZones.push([s,s+sz]);s+=sz;}}
+      this.uavs.forEach((u,ui)=>{const[minGx,maxGx]=dZones[ui];ctx.fillStyle=cols[ui%cols.length];ctx.fillRect(MAR+minGx*CW,MAR,(maxGx-minGx)*CW,CH*GRID);ctx.font='bold 10px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.fillStyle=u.body+'aa';ctx.fillText(`Zone ${String.fromCharCode(65+ui)}`,MAR+((minGx+maxGx)/2)*CW,MAR-10);});
+      ctx.textAlign='left';
+      for(let ui=1;ui<this.uavs.length;ui++){const[gx]=dZones[ui];ctx.setLineDash([4,4]);ctx.strokeStyle=this.uavs[ui].body+'55';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(MAR+gx*CW,MAR);ctx.lineTo(MAR+gx*CW,MAR+CH*GRID);ctx.stroke();ctx.setLineDash([]);}
+    }
+    const pathFn=pathFns[this.v.pathKey]||hPts;
+    const rp=pathFn(GRID).map(([gx,gy])=>this.cc(gx,gy));
+    // Planned route — bright dashed guide line
+    ctx.strokeStyle='rgba(56,189,248,0.35)';ctx.lineWidth=1.5;ctx.setLineDash([4,7]);
+    ctx.beginPath();rp.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    rp.forEach(([x,y])=>{ctx.fillStyle='rgba(56,189,248,0.45)';ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();});
+    // UAV trail — thick glowing trail
+    this.uavs.forEach(u=>{
+      if(u.path.length<2)return;
+      // glow pass
+      ctx.lineWidth=6;ctx.lineCap='round';
+      for(let i=1;i<u.path.length;i++){const a=i/u.path.length;if(a<0.6)continue;const alpha=Math.round(a*60).toString(16).padStart(2,'0');ctx.strokeStyle=u.body+alpha;ctx.beginPath();ctx.moveTo(u.path[i-1][0],u.path[i-1][1]);ctx.lineTo(u.path[i][0],u.path[i][1]);ctx.stroke();}
+      // solid pass
+      ctx.lineWidth=2.5;
+      for(let i=1;i<u.path.length;i++){const a=i/u.path.length;const alpha=Math.round(40+a*215).toString(16).padStart(2,'0');ctx.strokeStyle=u.body+alpha;ctx.beginPath();ctx.moveTo(u.path[i-1][0],u.path[i-1][1]);ctx.lineTo(u.path[i][0],u.path[i][1]);ctx.stroke();}
+    });
+    if(this.rf&&this.rf.t>0){const rf=this.rf,a=rf.t/80;ctx.strokeStyle=`rgba(56,189,248,${a*.9})`;ctx.lineWidth=1.8;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(rf.x,rf.y,50,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=`rgba(56,189,248,${a*.06})`;ctx.fill();ctx.font='bold 10px "JetBrains Mono",monospace';ctx.fillStyle=`rgba(125,211,252,${a})`;ctx.textAlign='center';ctx.fillText(scene===3?'ML flag zone':'Replan zone',rf.x,rf.y-56);ctx.textAlign='left';}
+    this.uavs.forEach(u=>{ctx.beginPath();ctx.arc(u.x,u.y,this.RANGE,0,Math.PI*2);ctx.fillStyle=u.body+'10';ctx.fill();ctx.strokeStyle=u.body+'35';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.stroke();ctx.setLineDash([]);});
+    this.particles.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fillStyle=p.col+(Math.round(p.life*200)).toString(16).padStart(2,'0');ctx.fill();});
+    this.devices.forEach(dv=>{
+      const st=dv.state,isFail=st==='failed',isOOR=st==='outofrange';
+      const isHot=(dv.isNew||(dv.priority&&st!=='collected'))&&!isFail&&!isOOR;
+      if(isHot){const pulse=.5+.5*Math.sin(t*3+dv.phase);ctx.beginPath();ctx.arc(dv.x,dv.y,10+4*pulse,0,Math.PI*2);ctx.fillStyle=`rgba(239,68,68,${.18*pulse})`;ctx.fill();}
+      if(isFail||isOOR){ctx.save();ctx.translate(dv.x,dv.y);ctx.strokeStyle=isFail?'rgba(160,158,155,.6)':'rgba(212,83,126,.6)';ctx.lineWidth=1;ctx.setLineDash([2,2]);ctx.beginPath();ctx.arc(0,0,7,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle=isFail?'rgba(210,208,205,.85)':'rgba(237,140,170,.85)';ctx.lineWidth=1.8;if(isFail){ctx.beginPath();ctx.moveTo(-3.5,-3.5);ctx.lineTo(3.5,3.5);ctx.stroke();ctx.beginPath();ctx.moveTo(3.5,-3.5);ctx.lineTo(-3.5,3.5);ctx.stroke();}else{ctx.beginPath();ctx.moveTo(-3.5,0);ctx.lineTo(3.5,0);ctx.stroke();}ctx.restore();ctx.font='500 9px "JetBrains Mono",monospace';ctx.fillStyle=isFail?'rgba(210,208,205,.75)':'rgba(237,140,170,.85)';ctx.fillText(isFail?'FAIL':'OOR',dv.x+8,dv.y+3);return;}
+      if(st==='inRange'){const p2=.5+.5*Math.sin(t*5+dv.phase);ctx.beginPath();ctx.arc(dv.x,dv.y,8+2*p2,0,Math.PI*2);ctx.fillStyle=`rgba(240,160,48,${.2*p2})`;ctx.fill();}
+      const cols={uncollected:'#4a90d9',inRange:'#f0a030',collected:'#10b981',newdev:'#ef4444'};
+      const c=(dv.priority&&st!=='collected')?'#ef4444':(cols[st]||'#4a90d9');
+      ctx.beginPath();ctx.arc(dv.x,dv.y,5,0,Math.PI*2);ctx.fillStyle=c;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1.5;ctx.stroke();
+    });
+    this.uavs.forEach((u,ui)=>{const ang=u.wi<u.wp.length?Math.atan2(u.wp[u.wi][1]-u.y,u.wp[u.wi][0]-u.x):u.ang;const label=scene===2&&this.uavs.length>1?`UAV ${String.fromCharCode(65+ui)}`:'UAV';drawDrone(ctx,u.x,u.y,ang,u.body,this.tick,label,u.bat);});
+    const active=this.devices.filter(d=>!['failed','outofrange'].includes(d.state));
+    if(active.length&&active.every(d=>d.state==='collected')&&this.uavs.every(u=>u.wi>=u.wp.length)){
+      setSt('Complete',false);
+      // Beautiful completion overlay
+      const grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
+      grd.addColorStop(0,'rgba(16,185,129,0.15)');grd.addColorStop(1,'rgba(16,185,129,0.02)');
+      ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+      ctx.save();
+      ctx.shadowColor='rgba(16,185,129,0.7)';ctx.shadowBlur=30;
+      ctx.font='bold 22px "JetBrains Mono",monospace';ctx.fillStyle='rgba(16,185,129,0.98)';ctx.textAlign='center';
+      ctx.fillText('✓ Collection Complete',W/2,H/2-12);
+      ctx.shadowBlur=0;
+      ctx.font='12px "JetBrains Mono",monospace';ctx.fillStyle='rgba(226,236,248,0.45)';
+      ctx.fillText('Click Replay to run again with same config',W/2,H/2+14);
+      ctx.restore();ctx.textAlign='left';
+    }
+  }
+  updateUI(){
+    const all=this.devices;
+    const col=all.filter(d=>d.state==='collected').length;
+    const total=all.filter(d=>!['failed','outofrange'].includes(d.state)).length;
+    const pct=total>0?Math.round(col/total*100):0;
+    document.getElementById('m-col').textContent=col;
+    document.getElementById('m-fail').textContent=all.filter(d=>d.state==='failed').length;
+    document.getElementById('m-oor').textContent=all.filter(d=>d.state==='outofrange').length;
+    document.getElementById('m-rep').textContent=this.replans+(this.noveltyDone?1:0);
+    document.getElementById('m-dist').textContent=Math.round(this.uavs[0].dist*3.5)+' m';
+    document.getElementById('m-prio').textContent=all.filter(d=>d.priority&&d.state!=='collected').length;
+    document.getElementById('prog-fill').style.width=pct+'%';
+    document.getElementById('prog-pct').textContent=pct+'%';
+    const batPct=Math.round(this.globalBat*100);
+    document.getElementById('bat-rem').textContent=batPct+'%';
+    document.getElementById('bat-fill').style.width=batPct+'%';
+    document.getElementById('bat-fill').style.background=batPct>40?'#10b981':'#f43f5e';
+    document.getElementById('ov-bat').textContent=batPct+'%';
+    const lv=gv();lv.bat=batPct;updatePred(lv);
+  }
+}
+
+function setSt(t,running=false){
+  document.getElementById('sim-st').textContent=t;
+  document.getElementById('sdot').className='sdot'+(running?' run':'');
+  const btn=document.getElementById('btn-start');
+  if(btn){
+    if(t==='Complete'){btn.textContent='↺ Replay';btn.style.background='linear-gradient(135deg,#10b981,#059669)';}
+    else if(running){btn.textContent='⏳ Running';btn.style.background='';}
+    else{btn.textContent='▶ Start';btn.style.background='';}
+  }
+}
+function rebuild(){if(S)S.stop();S=new Sim();setSt('Ready',false);}
+
+// ── TEST CASES DATA & RENDER ───────────────────────────────
+const TEST_CASES=[
+  // Baseline scenario × all 5 paths
+  {n:'01',name:'Baseline — Hilbert (ideal)',badge:'tc-base',label:'Baseline',scene:0,bat:100,spd:20,uav:1,tot:32,fail:0,oor:0,prio:0,dist:'normal',path:'hilbert',area:2000,exp:'Hilbert tops ~86, Baseline ~70'},
+  {n:'02',name:'Baseline — Snake traversal',badge:'tc-base',label:'Baseline',scene:0,bat:100,spd:20,uav:1,tot:32,fail:0,oor:0,prio:0,dist:'normal',path:'snake',area:2000,exp:'Snake ~71, solid even coverage'},
+  {n:'03',name:'Baseline — Diagonal sweep',badge:'tc-base',label:'Baseline',scene:0,bat:100,spd:20,uav:1,tot:32,fail:0,oor:0,prio:0,dist:'uniform',path:'diagonal',area:2000,exp:'Diagonal ~63, gaps in sparse zones'},
+  {n:'04',name:'Baseline — Spiral inward',badge:'tc-base',label:'Baseline',scene:0,bat:100,spd:20,uav:1,tot:24,fail:0,oor:0,prio:0,dist:'normal',path:'spiral',area:2000,exp:'Spiral ~73, strong for centre clusters'},
+  {n:'05',name:'Baseline — Random waypoint',badge:'tc-base',label:'Baseline',scene:0,bat:100,spd:40,uav:1,tot:64,fail:0,oor:0,prio:12,dist:'uniform',path:'random',area:2000,exp:'Random lowest ~46, chaotic coverage'},
+  // Novelty 1 × all 5 paths
+  {n:'06',name:'N1 Energy-aware — Hilbert',badge:'tc-n1',label:'Novelty 1',scene:1,bat:35,spd:10,uav:1,tot:32,fail:6,oor:5,prio:2,dist:'uniform',path:'hilbert',area:2000,exp:'N1 ~90+, replan fires at tick 85'},
+  {n:'07',name:'N1 Energy-aware — Snake',badge:'tc-n1',label:'Novelty 1',scene:1,bat:40,spd:10,uav:1,tot:32,fail:5,oor:4,prio:2,dist:'uniform',path:'snake',area:2000,exp:'N1 ~88, snake handles OOR well'},
+  {n:'08',name:'N1 Energy-aware — Diagonal',badge:'tc-n1',label:'Novelty 1',scene:1,bat:50,spd:15,uav:1,tot:48,fail:10,oor:8,prio:1,dist:'uniform',path:'diagonal',area:3000,exp:'N1 wins, Baseline collapses <20'},
+  {n:'09',name:'N1 Energy-aware — Spiral',badge:'tc-n1',label:'Novelty 1',scene:1,bat:30,spd:10,uav:1,tot:28,fail:4,oor:3,prio:3,dist:'normal',path:'spiral',area:2000,exp:'N1 ~85, spiral + low bat combo'},
+  {n:'10',name:'N1 Energy-aware — Random',badge:'tc-n1',label:'Novelty 1',scene:1,bat:10,spd:5,uav:1,tot:24,fail:2,oor:2,prio:1,dist:'normal',path:'random',area:1500,exp:'N1 wins with red battery warning'},
+  // Novelty 2 × all 5 paths
+  {n:'11',name:'N2 Multi-UAV — Hilbert',badge:'tc-n2',label:'Novelty 2',scene:2,bat:80,spd:25,uav:3,tot:48,fail:2,oor:2,prio:3,dist:'even',path:'hilbert',area:6000,exp:'N2 ~85, Hilbert zones A/B/C'},
+  {n:'12',name:'N2 Multi-UAV — Snake',badge:'tc-n2',label:'Novelty 2',scene:2,bat:80,spd:25,uav:3,tot:48,fail:2,oor:2,prio:3,dist:'even',path:'snake',area:6000,exp:'N2 ~83, snake across 3 zones'},
+  {n:'13',name:'N2 Multi-UAV — Diagonal',badge:'tc-n2',label:'Novelty 2',scene:2,bat:70,spd:30,uav:2,tot:40,fail:3,oor:3,prio:2,dist:'uniform',path:'diagonal',area:9000,exp:'N2 area bonus ~80, large field'},
+  {n:'14',name:'N2 Multi-UAV — Spiral',badge:'tc-n2',label:'Novelty 2',scene:2,bat:90,spd:35,uav:3,tot:64,fail:0,oor:0,prio:0,dist:'even',path:'spiral',area:50000,exp:'N2 area bonus maxed, ~95'},
+  {n:'15',name:'N2 Multi-UAV — Random',badge:'tc-n2',label:'Novelty 2',scene:2,bat:30,spd:10,uav:3,tot:32,fail:0,oor:0,prio:0,dist:'even',path:'random',area:3000,exp:'N2 drops, N1 wins (low bat)'},
+  // Novelty 3 × all 5 paths
+  {n:'16',name:'N3 ML-predictive — Hilbert',badge:'tc-n3',label:'Novelty 3',scene:3,bat:60,spd:20,uav:1,tot:32,fail:2,oor:4,prio:8,dist:'normal',path:'hilbert',area:2000,exp:'N3 vs N1 close race, ~88'},
+  {n:'17',name:'N3 ML-predictive — Snake',badge:'tc-n3',label:'Novelty 3',scene:3,bat:75,spd:20,uav:1,tot:36,fail:1,oor:1,prio:10,dist:'normal',path:'snake',area:2500,exp:'N3 ~90+, ML flag at tick 55'},
+  {n:'18',name:'N3 ML-predictive — Diagonal',badge:'tc-n3',label:'Novelty 3',scene:3,bat:70,spd:20,uav:1,tot:32,fail:1,oor:2,prio:6,dist:'uniform',path:'diagonal',area:3000,exp:'N3 ~85, diagonal + anomaly flags'},
+  {n:'19',name:'N3 ML-predictive — Spiral',badge:'tc-n3',label:'Novelty 3',scene:3,bat:85,spd:20,uav:1,tot:24,fail:0,oor:0,prio:12,dist:'normal',path:'spiral',area:2000,exp:'N3 ceiling ~94, all nodes priority'},
+  {n:'20',name:'N3 ML-predictive — Random',badge:'tc-edge',label:'Edge',scene:3,bat:60,spd:20,uav:1,tot:32,fail:0,oor:0,prio:4,dist:'uniform',path:'random',area:2000,exp:'Random ~52, weakest for ML prio'},
+];
+
+const SCENE_LABELS=['0 — Baseline','1 — Energy-aware','2 — Multi-UAV','3 — ML-predictive'];
+const PATH_LABELS={hilbert:'Hilbert curve',snake:'Snake traversal',diagonal:'Diagonal sweep',spiral:'Spiral inward',random:'Random waypoint'};
+const DIST_LABELS={normal:'Normal',uniform:'Uniform',even:'Even'};
+
+function batClass(v){return v<=30?'tc-red':v>=80?'tc-grn':'';}
+function numClass(v,thresh){return v>=thresh?'tc-red':'';}
+
+function renderTestCases(){
+  const grpColors={'Baseline':'tc-base','Novelty 1':'tc-n1','Novelty 2':'tc-n2','Novelty 3':'tc-n3','Edge':'tc-edge'};
+  const grpNames=['Baseline — Scenario 0 (all 5 paths)','Novelty 1 — Energy-aware Scenario (all 5 paths)','Novelty 2 — Multi-UAV Scenario (all 5 paths)','Novelty 3 — ML-predictive Scenario (all 5 paths)'];
+  let html='';
+  TEST_CASES.forEach((tc,i)=>{
+    // group header rows
+    if(i===0) html+=`<tr class="grp-hdr"><td colspan="16">🔵 ${grpNames[0]}</td></tr>`;
+    if(i===5) html+=`<tr class="grp-hdr"><td colspan="16">🟡 ${grpNames[1]}</td></tr>`;
+    if(i===10) html+=`<tr class="grp-hdr"><td colspan="16">🟢 ${grpNames[2]}</td></tr>`;
+    if(i===15) html+=`<tr class="grp-hdr"><td colspan="16">🔴 ${grpNames[3]}</td></tr>`;
+    const alt=i%2===1?' tr-alt':'';
+    html+=`<tr class="${alt}">
+      <td class="tc-num">${tc.n}</td>
+      <td class="tc-name">${tc.name}</td>
+      <td><span class="tc-badge ${tc.badge}">${tc.label}</span></td>
+      <td style="color:var(--text2);font-size:10px">${SCENE_LABELS[tc.scene]}</td>
+      <td class="tc-val ${batClass(tc.bat)}">${tc.bat}%</td>
+      <td class="tc-val">${tc.spd} m/s</td>
+      <td class="tc-val ${tc.uav>=3?'tc-grn':''}">${tc.uav}</td>
+      <td class="tc-val">${tc.tot}</td>
+      <td class="tc-val ${numClass(tc.fail,6)}">${tc.fail}</td>
+      <td class="tc-val ${numClass(tc.oor,5)}">${tc.oor}</td>
+      <td class="tc-val ${numClass(tc.prio,8)}">${tc.prio}</td>
+      <td style="color:var(--text2);font-size:10px">${DIST_LABELS[tc.dist]}</td>
+      <td style="color:var(--text);font-size:10px">${PATH_LABELS[tc.path]}</td>
+      <td class="tc-val">${tc.area.toLocaleString()}</td>
+      <td class="tc-exp">${tc.exp}</td>
+      <td><button class="btn-load" onclick="loadTC(${i})">▶ Load</button></td>
+    </tr>`;
+  });
+  document.getElementById('tc-tbody').innerHTML=html;
+}
+
+function loadTC(i){
+  const tc=TEST_CASES[i];
+  // set all sliders/inputs
+  document.getElementById('sl-bat').value=tc.bat;
+  document.getElementById('sl-spd').value=tc.spd;
+  document.getElementById('sl-uav').value=tc.uav;
+  document.getElementById('sl-tot').value=tc.tot;
+  document.getElementById('sl-fail').value=tc.fail;
+  document.getElementById('sl-oor').value=tc.oor;
+  document.getElementById('sl-prio').value=tc.prio;
+  document.getElementById('sel-path').value=tc.path;
+  document.getElementById('sel-dist').value=tc.dist;
+  document.getElementById('inp-area').value=tc.area;
+  document.getElementById('sl-area').value=Math.min(10000,tc.area);
+  // set scene
+  scene=tc.scene;
+  document.querySelectorAll('.sbt').forEach((b,si)=>b.classList.toggle('on',si===tc.scene));
+  document.getElementById('chip-scene').textContent=SCENE_NAMES[tc.scene].split(' — ')[0];
+  document.getElementById('ov-scene').textContent=SCENE_NAMES[tc.scene];
+  if(tc.scene===2){}// UAV count already set above
+  go();
+  // scroll to top
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+renderTestCases();
+
+resize();go();
+</script>
+</body>
+</html>
